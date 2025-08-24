@@ -8,6 +8,7 @@ SillytavernFile stFile = await fileConverter.ConvertFile(fileInfo);
 Your "stFile" now contains all messages and lots of extra information.
 
 # Types Overview
+```
 Everything is inside the SillytavernChatConversions namespace. So you may want to place using SillytavernChatConversions; at the top of your file.
 // Don't let the new dotnet context confuse you. All you need to do is new SillytavernFileConverter("Path to Chats"). This is just a way to set the ["Promary Constructor"](https://learn.microsoft.com/en-us/dotnet/csharp/whats-new/tutorials/primary-constructors). 
 SillytavernFileConverter(string path)
@@ -91,6 +92,7 @@ public class ChatMetadata
     int lastInContextMessageId = -1;
     // There's sometimes more information here like a quickReply list but I'm not certain how to parse it. If you know the structure feel free to open a bug report or suggest a addition.
 }
+```
 # Contributing
 We thrive on community wisdom! To help improve this project:
 
