@@ -6,6 +6,7 @@ namespace SillytavernChatConversions
         public string name = string.Empty;
         public bool isUser;
         public string message = string.Empty;
+        public int fileLine;
         public MessageMetadata metadata = new();
         public bool? isSystem;
         public int? swipeId;
@@ -16,8 +17,8 @@ namespace SillytavernChatConversions
     public class MessageMetadata
     {
         public DateTime sendDate;
-        public string reasoning = string.Empty;
-        public int tokenCount;
+        public string? reasoning = string.Empty;
+        public int? tokenCount;
         public DateTime? genStarted;
         public DateTime? genFinished;
         public string? api;

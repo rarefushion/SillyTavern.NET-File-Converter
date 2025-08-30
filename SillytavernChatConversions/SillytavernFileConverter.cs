@@ -14,7 +14,8 @@ namespace SillytavernChatConversions
                 .FirstOrDefault(d => d.Name == character)
                 ?? throw new Exception($"Character \"{character}\" does not exist in \"{chatsDirectory.FullName}\".");
 
-            fileName = Path.ChangeExtension(fileName, ".jsonl");
+            if (!fileName.EndsWith(".jsonl"))
+                fileName += ".jsonl";
             FileInfo fileInfo = characterPath
                 .GetFiles()
                 .FirstOrDefault(f => f.Name == fileName)
@@ -23,7 +24,7 @@ namespace SillytavernChatConversions
             return fileInfo;
         }
 
-        public async Task<SillytavernFile> ConvertFile(FileInfo fileInfo)
+        public async Task<SillytavernFile> ConvertFile(FileInfo fileInfo, bool ignoreBadMessages = true)
         {
             HeaderDetails? headerDetails = null;
             List<MessageData> messages = [];
@@ -40,7 +41,8 @@ namespace SillytavernChatConversions
                 if (index == 0) // Header
                     headerDetails = ParseHeaderDetails(json);
                 else
-                    messages.Add(ParseMessageData(json));
+                    try { messages.Add(ParseMessageData(json, index)); }
+                    catch { if (!ignoreBadMessages) throw; }
                 index++;
             }
             if (index == 0)
@@ -53,32 +55,43 @@ namespace SillytavernChatConversions
 
         public HeaderDetails ParseHeaderDetails(JsonNode json)
         {
-            JsonNode metadata = json["chat_metadata"]!;
-            return new()
+            if (json["user_name"] == null)
+                throw new Exception($"File header did not contain \"user_name\".");
+            if (json["character_name"] == null)
+                throw new Exception($"File header did not contain \"character_name\".");
+            JsonNode? metadata = json["chat_metadata"];
+            HeaderDetails toReturn = new()
             {
                 userName = json["user_name"]!.ToString(),
                 characterName = json["character_name"]!.ToString(),
-                creationDate = SillyTavernDateToDateTime(json["create_date"]!.ToString()),
+                creationDate = (json["create_date"] != null) ? SillyTavernDateToDateTime(json["create_date"]!.ToString()) : null,
                 chatMetadata = new()
                 {
-                    integrity = metadata["integrity"]?.ToString() ?? string.Empty,
-                    chatIdHash = (long)metadata["chat_id_hash"]!,
-                    attachments = metadata["attachments"] as JsonArray,
-                    variables = metadata["variables"] as JsonObject,
-                    notePrompt = metadata["note_prompt"]?.ToString() ?? string.Empty,
-                    noteInterval = (int?)metadata["note_interval"] ?? -1,
-                    notePosition = (int?)metadata["note_position"] ?? -1,
-                    noteDepth = (int?)metadata["note_depth"] ?? -1,
-                    noteRole = (int?)metadata["note_role"] ?? -1,
-                    timedWorldInfo = metadata["timedWorldInfo"] as JsonObject,
-                    tainted = (bool?)metadata["tainted"] ?? false,
-                    lastInContextMessageId = (int?)metadata["lastInContextMessageId"] ?? -1
+                    integrity = (string?)metadata?["integrity"],
+                    chatIdHash = (long?)metadata?["chat_id_hash"],
+                    attachments = metadata?["attachments"] as JsonArray ?? null,
+                    variables = metadata?["variables"] as JsonObject ?? null,
+                    notePrompt = (string?)metadata?["note_prompt"],
+                    noteInterval = (int?)metadata?["note_interval"],
+                    notePosition = (int?)metadata?["note_position"],
+                    noteDepth = (int?)metadata?["note_depth"],
+                    noteRole = (int?)metadata?["note_role"],
+                    timedWorldInfo = metadata?["timedWorldInfo"] as JsonObject ?? null,
+                    tainted = (bool?)metadata?["tainted"],
+                    lastInContextMessageId = (int?)metadata?["lastInContextMessageId"]
                 }
             };
+            return toReturn;
         }
 
-        public MessageData ParseMessageData(JsonNode json)
+        public MessageData ParseMessageData(JsonNode json, int fileLine)
         {
+            if (json["name"] == null)
+                throw new Exception($"Message did not contain \"name\".");
+            if (json["is_user"] == null)
+                throw new Exception($"Message did not contain \"is_user\".");
+            if (json["mes"] == null)
+                throw new Exception($"Message did not contain \"mes\".");
             JsonNode extra = json["extra"]!;
             return new()
             {
@@ -86,11 +99,12 @@ namespace SillytavernChatConversions
                 isUser = (bool)json["is_user"]!,
                 isSystem = (bool?)json["is_system"],
                 message = (string)json["mes"]!,
+                fileLine = fileLine,
                 metadata = new()
                 {
                     sendDate = DateTime.Parse((string)json["send_date"]!),
-                    reasoning = (string)extra["reasoning"]!,
-                    tokenCount = (int)extra["token_count"]!,
+                    reasoning = (string?)extra["reasoning"],
+                    tokenCount = (int?)extra["token_count"],
                     genStarted = (json["gen_started"] != null) ? SillyTavernDateToDateTime(json["gen_started"]!.ToString()) : null,
                     genFinished = (json["gen_finished"] != null) ? SillyTavernDateToDateTime(json["gen_finished"]!.ToString()) : null,
                     api = (string?)extra["api"],
@@ -103,12 +117,12 @@ namespace SillytavernChatConversions
                     title = (string?)json["title"]
                 },
                 swipeId = (int?)json["swipe_id"],
-                swipes = (string[]?)json["swipes"]?.AsArray()!.Select(x => x?.ToString() ?? string.Empty).ToArray() ?? null,
+                swipes = json["swipes"]?.AsArray()!.Select(x => x?.ToString() ?? string.Empty).ToArray() ?? null,
                 swipeMetadata = json["swipe_info"]?.AsArray()?.Select(x => new MessageMetadata()
                 {
                     sendDate = DateTime.Parse((string)x!["send_date"]!),
-                    reasoning = (string)x!["extra"]!["reasoning"]!,
-                    tokenCount = (int)x!["extra"]!["token_count"]!,
+                    reasoning = (string?)x!["extra"]!["reasoning"],
+                    tokenCount = (int?)x!["extra"]!["token_count"],
                     genStarted = (x!["gen_started"] != null) ? SillyTavernDateToDateTime(x!["gen_started"]!.ToString()) : null,
                     genFinished = (x!["gen_finished"] != null) ? SillyTavernDateToDateTime(x!["gen_finished"]!.ToString()) : null,
                     api = (string?)x!["extra"]!["api"],
@@ -117,7 +131,7 @@ namespace SillytavernChatConversions
                     timeToFirstToken = (int?)x!["extra"]!["time_to_first_token"],
                     reasoningType = (string?)x!["extra"]!["reasoning_type"],
                     isSmallSys = (bool?)x!["extra"]!["isSmallSys"]
-                }).ToArray()
+                }).ToArray() ?? null
             };
         }
 

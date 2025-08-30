@@ -7,25 +7,25 @@ namespace SillytavernChatConversions
     {
         public string userName = string.Empty;
         public string characterName = string.Empty;
-        public DateTime creationDate;
+        public DateTime? creationDate;
         public int lineCount;
         public ChatMetadata chatMetadata = new();
     }
 
     public class ChatMetadata
     {
-        public string integrity = string.Empty;
-        public long chatIdHash;
+        public string? integrity = string.Empty;
+        public long? chatIdHash;
         public JsonArray? attachments;
         public JsonObject? variables;
-        public string notePrompt = string.Empty;
-        public int noteInterval = -1;
-        public int notePosition = -1;
-        public int noteDepth = -1;
-        public int noteRole = -1;
+        public string? notePrompt = string.Empty;
+        public int? noteInterval = -1;
+        public int? notePosition = -1;
+        public int? noteDepth = -1;
+        public int? noteRole = -1;
         public JsonObject? timedWorldInfo;
-        public bool tainted = false;
-        public int lastInContextMessageId = -1;
+        public bool? tainted = false;
+        public int? lastInContextMessageId = -1;
         // Missing "quickReply":{"setList":[]} 
     }
 }
